@@ -110,11 +110,10 @@ end
 UP["steel-chest"] = "passive-provider-chest"
 UP["passive-provider-chest"] = "active-provider-chest"
 
-addRightwardChain{"pipe", "pipe-to-ground"}
 addRightwardChain{"storage-tank", "pump", "offshore-pump"}
-addUpwardChain{"pipe", "pump"}
-UP["pipe-to-ground"] = "pump"
-DOWN["pipe-to-ground"] = "pump"
+addRightwardChain{"pipe", "pipe-to-ground"}
+addUpwardChain{"pipe", "storage-tank"}
+addUpwardChain{"pipe-to-ground", "pump"}
 
 addRightwardChain{"locomotive", "cargo-wagon", "fluid-wagon"}
 
@@ -318,7 +317,6 @@ local function entityProtToItem(ent, entProt)
 		local ghostProt = ent.ghost_prototype
 		return entityProtToItem(nil, ghostProt)
 	end
-	-- TODO maybe handle tiles. Would need to check what's under cursor, not player.selected.
 end
 
 ---@param player LuaPlayer
@@ -381,6 +379,7 @@ local function tryChangeItem(player, transitionDict)
 		-- If nothing held, look at selected entity, if any.
 		--player.print("selected entity: " .. serpent.line(player.selected))
 		local item = entityProtToItem(player.selected, player.selected.prototype)
+		-- TODO maybe handle non-ghost tiles. Would need to check what's under cursor, not player.selected.
 		if item ~= nil then
 			tryChangeFrom(player, transitionDict, item)
 		end

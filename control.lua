@@ -218,6 +218,7 @@ DOWN["oxide-asteroid-chunk"] = "ice"
 addRightwardChain{"asteroid-collector", "crusher"}
 
 addUpwardChain{"iron-gear-wheel", "engine-unit", "electric-engine-unit"}
+DOWN["iron-gear-wheel"] = "iron-plate"
 addRightwardChain{"engine-unit", "electric-engine-unit", "flying-robot-frame"}
 addUpwardChain{"flying-robot-frame", "logistic-robot", "roboport"}
 addRightwardChain{"roboport", "radar"}
@@ -235,19 +236,22 @@ addUpwardChain{"superconductor", "supercapacitor"}
 
 addRightwardChain{"pentapod-egg", "biter-egg"}
 
-addRightwardChain{"green-wire", "red-wire"}
+addRightwardChain{"red-wire", "green-wire", "copper-wire"}
 local combinators = {"arithmetic-combinator", "decider-combinator", "selector-combinator", "constant-combinator", "power-switch", "programmable-speaker", "display-panel", "small-lamp"}
-addRightwardChain(combinators)
+addRightwardChain(combinators) -- in order that they're in in the crafting menu.
 for _, c in pairs(combinators) do
 	DOWN[c] = "red-wire"
 end
-UP["red-wire"] = "small-lamp"
-UP["green-wire"] = "small-lamp"
+UP["red-wire"] = "constant-combinator"
+UP["green-wire"] = "constant-combinator"
+UP["small-lamp"] = "constant-combinator"
 UP["constant-combinator"] = "arithmetic-combinator"
 UP["arithmetic-combinator"] = "decider-combinator"
 UP["decider-combinator"] = "selector-combinator"
 UP["selector-combinator"] = "display-panel"
-UP["small-lamp"] = "display-panel"
+UP["display-panel"] = "small-lamp"
+DOWN["power-switch"] = "copper-wire"
+UP["copper-wire"] = "power-switch"
 
 addUpwardChain{"lightning-rod", "lightning-collector"}
 

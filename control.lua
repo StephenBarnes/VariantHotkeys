@@ -326,14 +326,16 @@ end
 local function switchToItemOrGhost(player, item)
 	-- Given player and item name, switch to item or ghost with that itemName, depending if player has that item.
 	local inventory = player.get_main_inventory()
-	if inventory == nil then return end
-	local targetInInventory = inventory.find_item_stack(item)
-	if targetInInventory ~= nil then
-		player.cursor_stack.set_stack(targetInInventory)
-	else
-		player.clear_cursor()
-		player.cursor_ghost = item
+	-- Note that this inventory will be nil if player is in remote view.
+	if inventory ~= nil then
+		local targetInInventory = inventory.find_item_stack(item)
+		if targetInInventory ~= nil then
+			player.cursor_stack.set_stack(targetInInventory)
+			return
+		end
 	end
+	player.clear_cursor()
+	player.cursor_ghost = item
 end
 
 ---@param player LuaPlayer

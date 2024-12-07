@@ -8,30 +8,6 @@ local DOWN = {} ---@type { string: string }
 local LEFT = {} ---@type { string: string }
 local RIGHT = {} ---@type { string: string }
 
----@param entProt LuaEntityPrototype
----@return ItemIDAndQualityIDPair | nil
-local function entityProtToItem(entProt)
-	-- Returns item that places this entity.
-	if entProt.items_to_place_this ~= nil and #entProt.items_to_place_this ~= 0 then
-		return entProt.items_to_place_this[1]
-	elseif entProt.mineable_properties ~= nil
-		-- If it's not placeable, it could still be mineable, so use that.
-		and entProt.mineable_properties.minable
-		and entProt.mineable_properties.products ~= nil
-		and #entProt.mineable_properties.products ~= 0
-		and entProt.mineable_properties.products[1].type == "item" then
-		return {name = entProt.mineable_properties.products[1].name, quality = nil}
-	end
-end
-
----@param entProt LuaEntityPrototype
----@return string|nil
-local function entityProtToItemName(entProt)
-	-- Returns name of item that places this entity.
-	if entProt.items_to_place_this == nil or #entProt.items_to_place_this == 0 then return nil end
-	return entProt.items_to_place_this[1].name
-end
-
 local function addUpperLower(a, b)
 	if DOWN[a] ~= nil or UP[b] ~= nil then
 		log("Error: tried to create upper-lower relation between " .. a .. " and " .. b .. " but already have: " .. (UP[b] or "nil") .. " and " .. (DOWN[a] or "nil"))
@@ -323,6 +299,28 @@ end
 -- Functions to change held item/ghost.
 ------------------------------------------------------------------------
 
+---@param ent LuaEntity | nil
+---@param entProt LuaEntityPrototype|LuaTilePrototype
+---@return ItemIDAndQualityIDPair | nil
+local function entityProtToItem(ent, entProt)
+	-- Returns item associated with this entity.
+	-- Entity could be something you placed (eg transport belt), a mineable (eg iron ore), or a ghost building/tile.
+	if entProt.items_to_place_this ~= nil and #entProt.items_to_place_this ~= 0 then
+		local itemToPlace = entProt.items_to_place_this[1]
+		return {name = itemToPlace.name, quality = itemToPlace.quality}
+	elseif entProt.mineable_properties ~= nil
+		and entProt.mineable_properties.minable
+		and entProt.mineable_properties.products ~= nil
+		and #entProt.mineable_properties.products ~= 0
+		and entProt.mineable_properties.products[1].type == "item" then
+		return {name = entProt.mineable_properties.products[1].name, quality = nil}
+	elseif (entProt.type == "entity-ghost" or entProt.type == "tile-ghost") and ent ~= nil then
+		local ghostProt = ent.ghost_prototype
+		return entityProtToItem(nil, ghostProt)
+	end
+	-- TODO maybe handle tiles. Would need to check what's under cursor, not player.selected.
+end
+
 ---@param player LuaPlayer
 ---@param item ItemIDAndQualityIDPair
 local function switchToItemOrGhost(player, item)
@@ -380,8 +378,7 @@ local function tryChangeItem(player, transitionDict)
 	elseif player.selected ~= nil then
 		-- If nothing held, look at selected entity, if any.
 		--player.print("selected entity: " .. serpent.line(player.selected))
-		local ent = player.selected.prototype
-		local item = entityProtToItem(ent)
+		local item = entityProtToItem(player.selected, player.selected.prototype)
 		if item ~= nil then
 			tryChangeFrom(player, transitionDict, item)
 		end

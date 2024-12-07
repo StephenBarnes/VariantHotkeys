@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.1.0
+Date: 7. 12. 2024
+  Bugfixes:
+    - TODO Shortcuts now work in remote view.
+    - Shortcuts now work when mouse is on a ghost building or ghost tile.
+---------------------------------------------------------------------------------------------------
 Version: 1.0.0
 Date: 7. 12. 2024
   Features:

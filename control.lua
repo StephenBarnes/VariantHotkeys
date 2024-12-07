@@ -88,6 +88,10 @@ addGrid{
 -- Circuits
 addUpwardChain{"electronic-circuit", "advanced-circuit", "processing-unit", "quantum-processor"}
 
+-- Rocket parts
+addRightwardChain{"low-density-structure", "rocket-fuel", "processing-unit"}
+DOWN["low-density-structure"] = "steel-plate"
+
 -- Power poles
 addUpwardChain{"small-electric-pole", "medium-electric-pole", "big-electric-pole", "substation"}
 RIGHT["small-electric-pole"] = "substation"
@@ -115,12 +119,17 @@ addRightwardChain{"pipe", "pipe-to-ground"}
 addUpwardChain{"pipe", "storage-tank"}
 addUpwardChain{"pipe-to-ground", "pump"}
 
-addRightwardChain{"locomotive", "cargo-wagon", "fluid-wagon"}
+addRightwardChain {"locomotive", "cargo-wagon", "fluid-wagon"}
 
 addRightwardChain{"rail-signal", "rail-chain-signal"}
 UP["rail-signal"] = "train-stop"
 UP["rail-chain-signal"] = "train-stop"
 DOWN["train-stop"] = "rail-signal"
+
+addRightwardChain{"rail", "rail-ramp", "rail-support"}
+addUpwardChain{"rail", "rail-support", "locomotive"}
+DOWN["cargo-wagon"] = "rail-support"
+DOWN["fluid-wagon"] = "rail-support"
 
 -- Inserters
 local inserterUpwardChain = {"burner-inserter", "inserter", "fast-inserter", "bulk-inserter", "stack-inserter"}
@@ -144,9 +153,6 @@ addGrid{
 	{"burner-mining-drill", "stone-furnace"},
 }
 
-addRightwardChain{"rail", "rail-ramp", "rail-support"}
-addUpwardChain{"rail", "rail-support"}
-
 addUpwardChain{"stone", "stone-brick", "concrete", "refined-concrete"}
 addRightwardChain{"concrete", "hazard-concrete"}
 addRightwardChain{"refined-concrete", "refined-hazard-concrete"}
@@ -158,16 +164,11 @@ addGrid{
 	{"overgrowth-yumako-soil", "overgrowth-jellynut-soil"},
 	{"artificial-yumako-soil", "artificial-jellynut-soil"},
 }
-addRightwardChain{"yumako-seed", "jellynut-seed"}
-addRightwardChain{"yumako-mash", "jelly"}
-addRightwardChain{"yumako", "jellynut"}
-addUpwardChain{"yumako", "yumako-mash", "bioflux"}
-addUpperLower("jelly", "jellynut")
-UP["jelly"] = "bioflux"
-DOWN["jellynut"] = "bioflux"
-
-addRightwardChain{"spoilage", "nutrients", "bioflux"}
-addUpwardChain{"spoilage", "nutrients", "bioflux"}
+addGrid{
+	{"yumako-mash", "jelly", "nutrients"},
+	{"yumako", "jellynut", "bioflux"},
+	{"yumako-seed", "jellynut-seed", "spoilage"},
+}
 
 addUpwardChain{"car", "tank", "spidertron"}
 
@@ -184,6 +185,7 @@ UP["iron-bacteria"] = "iron-ore"
 UP["copper-bacteria"] = "copper-ore"
 addRightwardChain{"iron-plate", "copper-plate"}
 addRightwardChain{"iron-gear-wheel", "iron-stick", "copper-cable"}
+DOWN["iron-stick"] = "iron-plate"
 addUpwardChain{"holmium-ore", "holmium-plate"}
 addRightwardChain{"scrap", "holmium-ore"}
 addUpwardChain{"scrap", "recycler"}
@@ -193,13 +195,15 @@ addUpwardChain{"automation-science-pack", "logistic-science-pack", "military-sci
 addRightwardChain{"metallurgic-science-pack", "agricultural-science-pack", "electromagnetic-science-pack"}
 
 addUpwardChain{"solid-fuel", "rocket-fuel", "nuclear-fuel"}
+LEFT["nuclear-fuel"] = "uranium-fuel-cell"
+RIGHT["nuclear-fuel"] = "uranium-fuel-cell"
 
 addRightwardChain{"solar-panel", "accumulator"}
 
-addUpwardChain{"uranium-ore", "uranium-235", "uranium-fuel-cell", "fusion-cell"}
+addUpwardChain{"uranium-ore", "uranium-235", "uranium-fuel-cell", "fusion-power-cell"}
 addUpperLower("depleted-uranium-fuel-cell", "uranium-238")
 DOWN["uranium-238"] = "uranium-ore"
-UP["depleted-uranium-fuel-cell"] = "fusion-cell"
+UP["depleted-uranium-fuel-cell"] = "fusion-power-cell"
 addRightwardChain{"uranium-fuel-cell", "depleted-uranium-fuel-cell"}
 addRightwardChain{"uranium-235", "uranium-238"}
 
@@ -221,14 +225,29 @@ UP["construction-robot"] = "roboport"
 DOWN["construction-robot"] = "flying-robot-frame"
 addRightwardChain{"logistic-robot", "construction-robot"}
 
-addRightwardChain{"plastic-bar", "sulfur"}
+addRightwardChain{"plastic-bar", "sulfur", "battery"}
+DOWN["plastic-bar"] = "coal"
+UP["plastic-bar"] = "advanced-circuit"
+addUpwardChain{"sulfur", "explosives"}
 
 addRightwardChain{"superconductor", "supercapacitor"}
 addUpwardChain{"superconductor", "supercapacitor"}
 
 addRightwardChain{"pentapod-egg", "biter-egg"}
 
-addRightwardChain{"arithmetic-combinator", "decider-combinator", "selector-combinator", "constant-combinator", "power-switch", "programmable-speaker", "display-panel", "small-lamp"}
+addRightwardChain{"green-wire", "red-wire"}
+local combinators = {"arithmetic-combinator", "decider-combinator", "selector-combinator", "constant-combinator", "power-switch", "programmable-speaker", "display-panel", "small-lamp"}
+addRightwardChain(combinators)
+for _, c in pairs(combinators) do
+	DOWN[c] = "red-wire"
+end
+UP["red-wire"] = "small-lamp"
+UP["green-wire"] = "small-lamp"
+UP["constant-combinator"] = "arithmetic-combinator"
+UP["arithmetic-combinator"] = "decider-combinator"
+UP["decider-combinator"] = "selector-combinator"
+UP["selector-combinator"] = "display-panel"
+UP["small-lamp"] = "display-panel"
 
 addUpwardChain{"lightning-rod", "lightning-collector"}
 
@@ -239,8 +258,9 @@ addGrid{
 }
 
 addRightwardChain{"chemical-plant", "oil-refinery"}
-addUpwardChain{"chemical-plant", "cryogenic-plant"}
-addRightwardChain{"foundry", "biochamber", "electromagnetic-plant", "cryogenic-plant"}
+addUpwardChain{"chemical-plant", "biochamber", "cryogenic-plant"}
+addRightwardChain{"assembling-machine-3", "foundry", "biochamber", "electromagnetic-plant", "cryogenic-plant"}
+DOWN["foundry"] = "electric-furnace"
 
 addGrid{
 	{"submachine-gun", "combat-shotgun"},
@@ -273,11 +293,10 @@ addUpwardChain{"assembling-machine-1", "assembling-machine-2", "assembling-machi
 addUpwardChain{"landfill", "foundation"}
 addRightwardChain{"landfill", "foundation"}
 
-addRightwardChain{"fusion-reactor", "fusion-generator"}
-
-addRightwardChain{"green-wire", "red-wire"}
+addRightwardChain{"fusion-reactor", "fusion-generator", "fusion-power-cell"}
 
 addRightwardChain{"spidertron", "spidertron-remote"}
+UP["raw-fish"] = "spidertron"
 
 ------------------------------------------------------------------------
 -- Checks for whether items exist.

@@ -9,6 +9,22 @@ local LEFT = {} ---@type { string: string }
 local RIGHT = {} ---@type { string: string }
 
 ---@param entProt LuaEntityPrototype
+---@return ItemIDAndQualityIDPair | nil
+local function entityProtToItem(entProt)
+	-- Returns item that places this entity.
+	if entProt.items_to_place_this ~= nil and #entProt.items_to_place_this ~= 0 then
+		return entProt.items_to_place_this[1]
+	elseif entProt.mineable_properties ~= nil
+		-- If it's not placeable, it could still be mineable, so use that.
+		and entProt.mineable_properties.minable
+		and entProt.mineable_properties.products ~= nil
+		and #entProt.mineable_properties.products ~= 0
+		and entProt.mineable_properties.products[1].type == "item" then
+		return {name = entProt.mineable_properties.products[1].name, quality = nil}
+	end
+end
+
+---@param entProt LuaEntityPrototype
 ---@return string|nil
 local function entityProtToItemName(entProt)
 	-- Returns name of item that places this entity.
@@ -39,99 +55,269 @@ local function addUpwardChain(l)
 		return
 	end
 	for i = 1, #l - 1 do
-		addUpperLower(l[i], l[i + 1])
+		addUpperLower(l[i+1], l[i])
 	end
+	addUpperLower(l[1], l[#l])
 end
 
+local function addRightwardChain(l)
+	if #l < 2 then
+		log("Error: tried to create rightward chain with only one item: " .. serpent.line(l))
+		return
+	end
+	for i = 1, #l - 1 do
+		addLeftRight(l[i], l[i + 1])
+	end
+	addLeftRight(l[#l], l[1])
+end
 
-
-------------------------------------------------------------------------
---- Build tables of belts, and then populate transition tables.
-------------------------------------------------------------------------
-
--- TODO belts, splitters, undergrounds
-
-local belts = {} ---@type { number: string }
-local beltToNext = {} ---@type { string: string }
-local beltToPrev = {}
-local beltToUnderground = {} ---@type { string: string }
-
-for _, belt in pairs(prototypes.get_entity_filtered{{filter="type", type="transport-belt"}}) do
-	---@cast belt LuaEntityPrototype
-	local beltItemName = entityProtToItemName(belt)
-	table.insert(belts, beltItemName)
-	if beltItemName ~= nil then
-		local nextBelt = belt.next_upgrade
-		if nextBelt ~= nil then
-			local nextBeltItemName = entityProtToItemName(nextBelt)
-			if nextBeltItemName ~= nil then
-				beltToNext[beltItemName] = nextBeltItemName
-				beltToPrev[nextBeltItemName] = beltItemName
+local function addGrid(g)
+	-- Adds a grid of items, assuming each row the same length.
+	local len = #g[1]
+	for i = 2, #g do
+		if #g[i] ~= len then
+			log("Error: tried to create grid with unequal rows: " .. serpent.line(g))
+			return
+		end
+	end
+	if len >= 2 then
+		for i = 1, #g do
+			addRightwardChain(g[i])
+		end
+	end
+	-- Create columns
+	if #g >= 2 then
+		for i = 1, len do
+			local col = {}
+			for j = #g, 1, -1 do
+				col[#col+1] = g[j][i]
 			end
-		end
-		local underground = belt.related_underground_belt
-		if underground ~= nil then
-			local undergroundItemName = entityProtToItemName(underground)
-			if undergroundItemName ~= nil then
-				beltToUnderground[beltItemName] = undergroundItemName
-			end
+			addUpwardChain(col)
 		end
 	end
 end
 
--- Add loop-around from top to bottom.
-local bottomBelt = belts[1]
-while beltToPrev[bottomBelt] ~= nil do bottomBelt = beltToPrev[bottomBelt] end
-local topBelt = belts[1]
-while beltToNext[topBelt] ~= nil do topBelt = beltToNext[topBelt] end
-beltToNext[topBelt] = bottomBelt
-beltToPrev[bottomBelt] = topBelt
+------------------------------------------------------------------------
+--- Build transition tables, as grids and lines.
+------------------------------------------------------------------------
 
-for _, belt in pairs(belts) do
-	local nextBelt = beltToNext[belt]
-	if nextBelt ~= nil then
-		addUpperLower(nextBelt, belt)
-	end
-	local underground = beltToUnderground[belt]
-	if underground ~= nil then
-		addLeftRight(underground, belt)
-	end
-	if underground ~= nil and nextBelt ~= nil then
-		local nextUnderground = beltToUnderground[nextBelt]
-		if nextUnderground ~= nil then
-			addUpperLower(nextUnderground, underground)
+-- Belts, splitters, undergrounds.
+addGrid{
+	{ "turbo-transport-belt", "turbo-underground-belt", "turbo-splitter" },
+	{ "express-transport-belt", "express-underground-belt", "express-splitter" },
+	{ "fast-transport-belt", "fast-underground-belt", "fast-splitter" },
+	{ "transport-belt", "underground-belt", "splitter" },
+}
+
+-- Circuits
+addUpwardChain{"electronic-circuit", "advanced-circuit", "processing-unit", "quantum-processor"}
+
+-- Power poles
+addUpwardChain{"small-electric-pole", "medium-electric-pole", "big-electric-pole", "substation"}
+RIGHT["small-electric-pole"] = "substation"
+LEFT["small-electric-pole"] = "substation"
+RIGHT["medium-electric-pole"] = "substation"
+LEFT["medium-electric-pole"] = "substation"
+addRightwardChain{"substation", "big-electric-pole"}
+
+-- Chests and logistic chests
+local chests = {"wooden-chest", "iron-chest", "steel-chest"}
+local logisticChests = {"active-provider-chest", "passive-provider-chest", "storage-chest", "buffer-chest", "requester-chest"}
+addUpwardChain(chests)
+addRightwardChain(logisticChests)
+for _, chest in pairs(chests) do
+	RIGHT[chest] = "passive-provider-chest"
+end
+for _, logChest in pairs(logisticChests) do
+	DOWN[logChest] = "steel-chest"
+end
+UP["steel-chest"] = "passive-provider-chest"
+UP["passive-provider-chest"] = "active-provider-chest"
+
+addRightwardChain{"pipe", "pipe-to-ground"}
+addRightwardChain{"storage-tank", "pump", "offshore-pump"}
+addUpwardChain{"pipe", "pump"}
+UP["pipe-to-ground"] = "pump"
+DOWN["pipe-to-ground"] = "pump"
+
+addRightwardChain{"locomotive", "cargo-wagon", "fluid-wagon"}
+
+addRightwardChain{"rail-signal", "rail-chain-signal"}
+UP["rail-signal"] = "train-stop"
+UP["rail-chain-signal"] = "train-stop"
+DOWN["train-stop"] = "rail-signal"
+
+-- Inserters
+local inserterUpwardChain = {"burner-inserter", "inserter", "fast-inserter", "bulk-inserter", "stack-inserter"}
+addUpwardChain(inserterUpwardChain)
+for _, inserter in pairs(inserterUpwardChain) do
+	RIGHT[inserter] = "long-handed-inserter"
+	LEFT[inserter] = "long-handed-inserter"
+end
+RIGHT["long-handed-inserter"] = "fast-inserter"
+LEFT["long-handed-inserter"] = "fast-inserter"
+
+addRightwardChain{"boiler", "steam-engine"}
+addRightwardChain{"heat-pipe", "heat-exchanger", "steam-turbine"}
+
+addUpwardChain{"lab", "biolab"}
+addRightwardChain{"lab", "biolab"}
+
+addGrid{
+	{"big-mining-drill", "electric-furnace"},
+	{"electric-mining-drill", "steel-furnace"},
+	{"burner-mining-drill", "stone-furnace"},
+}
+
+addRightwardChain{"rail", "rail-ramp", "rail-support"}
+addUpwardChain{"rail", "rail-support"}
+
+addUpwardChain{"stone", "stone-brick", "concrete", "refined-concrete"}
+addRightwardChain{"concrete", "hazard-concrete"}
+addRightwardChain{"refined-concrete", "refined-hazard-concrete"}
+addUpwardChain{"hazard-concrete", "refined-hazard-concrete"}
+
+addRightwardChain{"explosives", "cliff-explosives"}
+
+addGrid{
+	{"overgrowth-yumako-soil", "overgrowth-jellynut-soil"},
+	{"artificial-yumako-soil", "artificial-jellynut-soil"},
+}
+addRightwardChain{"yumako-seed", "jellynut-seed"}
+addRightwardChain{"yumako-mash", "jelly"}
+addRightwardChain{"yumako", "jellynut"}
+addUpwardChain{"yumako", "yumako-mash", "bioflux"}
+addUpperLower("jelly", "jellynut")
+UP["jelly"] = "bioflux"
+DOWN["jellynut"] = "bioflux"
+
+addRightwardChain{"spoilage", "nutrients", "bioflux"}
+addUpwardChain{"spoilage", "nutrients", "bioflux"}
+
+addUpwardChain{"car", "tank", "spidertron"}
+
+addUpwardChain{"copper-ore", "copper-plate", "copper-cable"}
+addUpwardChain{"iron-ore", "iron-plate", "steel-plate"}
+addRightwardChain{"steel-plate", "tungsten-plate"}
+addUpwardChain{"tungsten-ore", "tungsten-carbide", "tungsten-plate"}
+addRightwardChain{"tungsten-ore", "calcite"}
+addUpwardChain{"coal", "carbon", "carbon-fiber"}
+addRightwardChain{"wood", "coal", "solid-fuel"}
+addRightwardChain{"iron-ore", "copper-ore"}
+addRightwardChain{"iron-bacteria", "copper-bacteria"}
+UP["iron-bacteria"] = "iron-ore"
+UP["copper-bacteria"] = "copper-ore"
+addRightwardChain{"iron-plate", "copper-plate"}
+addRightwardChain{"iron-gear-wheel", "iron-stick", "copper-cable"}
+addUpwardChain{"holmium-ore", "holmium-plate"}
+addRightwardChain{"scrap", "holmium-ore"}
+addUpwardChain{"scrap", "recycler"}
+addUpwardChain{"lithium", "lithium-plate"}
+
+addUpwardChain{"automation-science-pack", "logistic-science-pack", "military-science-pack", "chemical-science-pack", "production-science-pack", "utility-science-pack", "space-science-pack", "metallurgic-science-pack", "agricultural-science-pack", "electromagnetic-science-pack", "cryogenic-science-pack", "promethium-science-pack"}
+addRightwardChain{"metallurgic-science-pack", "agricultural-science-pack", "electromagnetic-science-pack"}
+
+addUpwardChain{"solid-fuel", "rocket-fuel", "nuclear-fuel"}
+
+addRightwardChain{"solar-panel", "accumulator"}
+
+addUpwardChain{"uranium-ore", "uranium-235", "uranium-fuel-cell", "fusion-cell"}
+addUpperLower("depleted-uranium-fuel-cell", "uranium-238")
+DOWN["uranium-238"] = "uranium-ore"
+UP["depleted-uranium-fuel-cell"] = "fusion-cell"
+addRightwardChain{"uranium-fuel-cell", "depleted-uranium-fuel-cell"}
+addRightwardChain{"uranium-235", "uranium-238"}
+
+addRightwardChain{"metallic-asteroid-chunk", "carbonic-asteroid-chunk", "oxide-asteroid-chunk", "promethium-asteroid-chunk"}
+UP["metallic-asteroid-chunk"] = "iron-ore"
+DOWN["metallic-asteroid-chunk"] = "iron-ore"
+UP["carbonic-asteroid-chunk"] = "carbon"
+DOWN["carbonic-asteroid-chunk"] = "carbon"
+UP["oxide-asteroid-chunk"] = "ice"
+DOWN["oxide-asteroid-chunk"] = "ice"
+
+addRightwardChain{"asteroid-collector", "crusher"}
+
+addUpwardChain{"iron-gear-wheel", "engine-unit", "electric-engine-unit"}
+addRightwardChain{"engine-unit", "electric-engine-unit", "flying-robot-frame"}
+addUpwardChain{"flying-robot-frame", "logistic-robot", "roboport"}
+addRightwardChain{"roboport", "radar"}
+UP["construction-robot"] = "roboport"
+DOWN["construction-robot"] = "flying-robot-frame"
+addRightwardChain{"logistic-robot", "construction-robot"}
+
+addRightwardChain{"plastic-bar", "sulfur"}
+
+addRightwardChain{"superconductor", "supercapacitor"}
+addUpwardChain{"superconductor", "supercapacitor"}
+
+addRightwardChain{"pentapod-egg", "biter-egg"}
+
+addRightwardChain{"arithmetic-combinator", "decider-combinator", "selector-combinator", "constant-combinator", "power-switch", "programmable-speaker", "display-panel", "small-lamp"}
+
+addUpwardChain{"lightning-rod", "lightning-collector"}
+
+addGrid{
+	{"speed-module-3", "efficiency-module-3", "productivity-module-3", "quality-module-3"},
+	{"speed-module-2", "efficiency-module-2", "productivity-module-2", "quality-module-2"},
+	{"speed-module", "efficiency-module", "productivity-module", "quality-module"},
+}
+
+addRightwardChain{"chemical-plant", "oil-refinery"}
+addUpwardChain{"chemical-plant", "cryogenic-plant"}
+addRightwardChain{"foundry", "biochamber", "electromagnetic-plant", "cryogenic-plant"}
+
+addGrid{
+	{"submachine-gun", "combat-shotgun"},
+	{"pistol", "shotgun"},
+}
+
+addUpwardChain{"shotgun-shell", "piercing-shotgun-shell"}
+addGrid{
+	{"uranium-cannon-shell", "explosive-uranium-cannon-shell"},
+	{"cannon-shell", "explosive-cannon-shell"},
+}
+addGrid{
+	{"uranium-rounds-magazine", "atomic-bomb"},
+	{"piercing-rounds-magazine", "explosive-rocket"},
+	{"firearm-magazine", "rocket"},
+}
+addUpwardChain{"grenade", "cluster-grenade"}
+addRightwardChain{"slowdown-capsule", "poison-capsule"}
+addUpwardChain{"defender-capsule", "distractor-capsule", "destroyer-capsule"}
+addUpwardChain{"light-armor", "heavy-armor", "modular-armor", "power-armor", "power-armor-mk2", "mech-armor"}
+addUpwardChain{"fission-reactor-equipment", "fusion-reactor-equipment"}
+addUpwardChain{"battery-equipment", "battery-mk2-equipment", "battery-mk3-equipment"}
+addUpwardChain{"personal-roboport-equipment", "personal-roboport-mk2-equipment"}
+addUpwardChain{"energy-shield-equipment", "energy-shield-mk2-equipment"}
+
+addRightwardChain{"stone-wall", "gate"}
+
+addUpwardChain{"assembling-machine-1", "assembling-machine-2", "assembling-machine-3"}
+
+addUpwardChain{"landfill", "foundation"}
+addRightwardChain{"landfill", "foundation"}
+
+addRightwardChain{"fusion-reactor", "fusion-generator"}
+
+addRightwardChain{"green-wire", "red-wire"}
+
+addRightwardChain{"spidertron", "spidertron-remote"}
+
+------------------------------------------------------------------------
+-- Checks for whether items exist.
+------------------------------------------------------------------------
+
+for _, transitionDict in pairs{UP, DOWN, LEFT, RIGHT} do
+	for first, second in pairs(transitionDict) do
+		if prototypes.item[first] == nil then
+			log("Error: tried to create transition between non-existent item: " .. first)
+		end
+		if prototypes.item[second] == nil then
+			log("Error: tried to create transition between non-existent item: " .. second)
 		end
 	end
 end
-
-
-------------------------------------------------------------------------
---- Populate transition tables for some ad-hoc stuff.
-------------------------------------------------------------------------
-
--- TODO inserters
--- TODO rails, signals, train stations.
--- TODO rails, rail pillars, rail ramps
--- TODO iron copper steel plastic sulfur carbon
--- TODO gears, sticks, cables
--- TODO circuits
--- TODO rocket fuel, nuclear fuel, solid fuel, etc.
--- TODO power poles
--- TODO pipes, underground pipes, pumps, tanks
--- TODO tiles -- stone brick, concrete, refined
--- TODO boiler, steam engine
--- TODO heat exchanges, turbine, heat pipe
--- TODO furnace
--- TODO assembling machines
--- TODO chem plant, refinery
--- TODO modules! up/down and left/right
--- TODO lightning rod
--- TODO fusion generator and reactor
--- TODO lab and biolab
--- TODO chests, and logistic chests
--- TODO combinators
--- TODO gleba soils
--- TODO bot types
 
 ------------------------------------------------------------------------
 -- Functions to change held item/ghost.
@@ -169,21 +355,38 @@ end
 
 ---@param player LuaPlayer
 ---@param transitionDict { string: string }
+local function tryChangeFrom(player, transitionDict, startItem)
+	local newItemName = transitionDict[startItem.name]
+	if prototypes.item[newItemName] == nil then
+		--player.print("tried to switch to non-existent item: " .. (newItemName or "nil"))
+		return
+	end
+	if newItemName ~= nil then
+		--player.print("switching to " .. (newItemName or "nil"))
+		local newItem  = {name = newItemName, quality = startItem.quality}
+		switchToItemOrGhost(player, newItem)
+		return
+	end
+end
+
+---@param player LuaPlayer
+---@param transitionDict { string: string }
 local function tryChangeItem(player, transitionDict)
 	-- Given player and transition dict for currently-held item/ghost, try to change held item/ghost.
 	local held = getPlayerHeldItem(player)
 	if held ~= nil and held.name ~= nil then
 		--game.print("held item: " .. serpent.line(held))
-		local newItemName = transitionDict[held.name]
-		if newItemName ~= nil then
-			game.print("switching to " .. (newItemName or "nil"))
-			local newItem  = {name = newItemName, quality = held.quality}
-			switchToItemOrGhost(player, newItem)
-			return
+		tryChangeFrom(player, transitionDict, held)
+	elseif player.selected ~= nil then
+		-- If nothing held, look at selected entity, if any.
+		--player.print("selected entity: " .. serpent.line(player.selected))
+		local ent = player.selected.prototype
+		local item = entityProtToItem(ent)
+		if item ~= nil then
+			tryChangeFrom(player, transitionDict, item)
 		end
 	else
-		-- TODO maybe do something with selected entity, eg pick it and then do the transition.
-		game.print("nothing held")
+		--player.print("nothing held")
 	end
 end
 
@@ -205,10 +408,5 @@ script.on_event("VariantHotkeys-down", function(event) handleEvent(event, DOWN) 
 script.on_event("VariantHotkeys-left", function(event) handleEvent(event, LEFT) end)
 script.on_event("VariantHotkeys-right", function(event) handleEvent(event, RIGHT) end)
 
--- TODO draw a big map of items, with arrows, and post it with the mod.
-
--- TODO keep quality of selected item stack.
-
--- TODO check what happens if target item doesn't exist, eg Space Age isn't installed.
-
--- TODO implement API for other mods to add their own transitions to the dicts.
+-- TODO adjust for the case where Space Age isn't activated.
+-- TODO maybe add API for other mods to add their own rules to the transition tables.

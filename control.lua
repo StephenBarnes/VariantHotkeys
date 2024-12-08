@@ -352,6 +352,7 @@ local function switchToItemOrGhost(player, item)
 		local targetInInventory = inventory.find_item_stack(item)
 		if targetInInventory ~= nil then
 			player.cursor_stack.set_stack(targetInInventory)
+			targetInInventory.clear() -- Remove from inventory so we don't dupe items.
 			return
 		end
 	end

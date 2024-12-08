@@ -345,6 +345,7 @@ end
 ---@param player LuaPlayer
 ---@param item ItemIDAndQualityIDPair
 local function switchToItemOrGhost(player, item)
+	player.clear_cursor() -- Do this before anything else, to put held items back into inventory.
 	-- Given player and item name, switch to item or ghost with that itemName, depending if player has that item.
 	local inventory = player.get_main_inventory()
 	-- Note that this inventory will be nil if player is in remote view.
@@ -356,7 +357,7 @@ local function switchToItemOrGhost(player, item)
 			return
 		end
 	end
-	player.clear_cursor()
+	-- If we reach this point we couldn't put an item from inventory into player's cursor, so put a ghost instead.
 	player.cursor_ghost = item
 end
 

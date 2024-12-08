@@ -2,7 +2,7 @@
 Version: 1.2.0
 Date: 8. 12. 2024
   Bugfixes:
-    - Fixed duping items in inventory.
+    - Fixed bug that duplicated or deleted items in inventory.
 ---------------------------------------------------------------------------------------------------
 Version: 1.1.1
 Date: 7. 12. 2024

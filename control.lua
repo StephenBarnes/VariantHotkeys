@@ -8,16 +8,16 @@ local DOWN = {} ---@type { string: string }
 local LEFT = {} ---@type { string: string }
 local RIGHT = {} ---@type { string: string }
 
-local function addUpperLower(a, b)
-	if DOWN[a] ~= nil or UP[b] ~= nil then
+local function addUpperLower(a, b, override)
+	if (not override) and (DOWN[a] ~= nil or UP[b] ~= nil) then
 		log("Error: tried to create upper-lower relation between " .. a .. " and " .. b .. " but already have: " .. (UP[b] or "nil") .. " and " .. (DOWN[a] or "nil"))
 		return
 	end
 	DOWN[a] = b
 	UP[b] = a
 end
-local function addLeftRight(a, b)
-	if RIGHT[a] ~= nil or LEFT[b] ~= nil then
+local function addLeftRight(a, b, override)
+	if (not override) and (RIGHT[a] ~= nil or LEFT[b] ~= nil) then
 		log("Error: tried to create left/right relation between " .. a .. " and " .. b .. " but already have: " .. (LEFT[b] or "nil") .. " and " .. (RIGHT[a] or "nil"))
 		return
 	end
@@ -25,26 +25,26 @@ local function addLeftRight(a, b)
 	LEFT[b] = a
 end
 
-local function addUpwardChain(l)
+local function addUpwardChain(l, override)
 	if #l < 2 then
 		log("Error: tried to create upward chain with only one item: " .. serpent.line(l))
 		return
 	end
 	for i = 1, #l - 1 do
-		addUpperLower(l[i+1], l[i])
+		addUpperLower(l[i+1], l[i], override)
 	end
-	addUpperLower(l[1], l[#l])
+	addUpperLower(l[1], l[#l], override)
 end
 
-local function addRightwardChain(l)
+local function addRightwardChain(l, override)
 	if #l < 2 then
 		log("Error: tried to create rightward chain with only one item: " .. serpent.line(l))
 		return
 	end
 	for i = 1, #l - 1 do
-		addLeftRight(l[i], l[i + 1])
+		addLeftRight(l[i], l[i + 1], override)
 	end
-	addLeftRight(l[#l], l[1])
+	addLeftRight(l[#l], l[1], override)
 end
 
 local function addGrid(g)
@@ -113,6 +113,7 @@ for _, logChest in pairs(logisticChests) do
 end
 UP["steel-chest"] = "passive-provider-chest"
 UP["passive-provider-chest"] = "active-provider-chest"
+UP["active-provider-chest"] = "steel-chest"
 
 addRightwardChain{"storage-tank", "pump", "offshore-pump"}
 addRightwardChain{"pipe", "pipe-to-ground"}
@@ -148,10 +149,17 @@ addUpwardChain{"lab", "biolab"}
 addRightwardChain{"lab", "biolab"}
 
 addGrid{
-	{"big-mining-drill", "electric-furnace"},
-	{"electric-mining-drill", "steel-furnace"},
-	{"burner-mining-drill", "stone-furnace"},
+	{"big-mining-drill", "electric-furnace", "assembling-machine-3"},
+	{"electric-mining-drill", "steel-furnace", "assembling-machine-2"},
+	{"burner-mining-drill", "stone-furnace", "assembling-machine-1"},
 }
+
+addRightwardChain({"assembling-machine-3", "foundry", "biochamber", "electromagnetic-plant", "cryogenic-plant"}, true)
+DOWN["foundry"] = "electric-furnace"
+LEFT["assembling-machine-3"] = "electric-furnace"
+
+addRightwardChain{"chemical-plant", "oil-refinery"}
+addUpwardChain{"chemical-plant", "biochamber", "cryogenic-plant"}
 
 addUpwardChain{"stone", "stone-brick", "concrete", "refined-concrete"}
 addRightwardChain{"concrete", "hazard-concrete"}
@@ -261,11 +269,6 @@ addGrid{
 	{"speed-module", "efficiency-module", "productivity-module", "quality-module"},
 }
 
-addRightwardChain{"chemical-plant", "oil-refinery"}
-addUpwardChain{"chemical-plant", "biochamber", "cryogenic-plant"}
-addRightwardChain{"assembling-machine-3", "foundry", "biochamber", "electromagnetic-plant", "cryogenic-plant"}
-DOWN["foundry"] = "electric-furnace"
-
 addGrid{
 	{"submachine-gun", "combat-shotgun"},
 	{"pistol", "shotgun"},
@@ -275,11 +278,6 @@ addUpwardChain{"shotgun-shell", "piercing-shotgun-shell"}
 addGrid{
 	{"uranium-cannon-shell", "explosive-uranium-cannon-shell"},
 	{"cannon-shell", "explosive-cannon-shell"},
-}
-addGrid{
-	{"uranium-rounds-magazine", "atomic-bomb"},
-	{"piercing-rounds-magazine", "explosive-rocket"},
-	{"firearm-magazine", "rocket"},
 }
 addUpwardChain{"grenade", "cluster-grenade"}
 addRightwardChain{"slowdown-capsule", "poison-capsule"}
@@ -292,8 +290,6 @@ addUpwardChain{"energy-shield-equipment", "energy-shield-mk2-equipment"}
 
 addRightwardChain{"stone-wall", "gate"}
 
-addUpwardChain{"assembling-machine-1", "assembling-machine-2", "assembling-machine-3"}
-
 addUpwardChain{"landfill", "foundation"}
 addRightwardChain{"landfill", "foundation"}
 
@@ -301,6 +297,25 @@ addRightwardChain{"fusion-reactor", "fusion-generator", "fusion-power-cell"}
 
 addRightwardChain{"spidertron", "spidertron-remote"}
 UP["raw-fish"] = "spidertron"
+
+addUpwardChain{"firearm-magazine", "piercing-rounds-magazine", "uranium-rounds-magazine"}
+addUpwardChain{"rocket", "explosive-rocket", "atomic-bomb"}
+
+addUpwardChain{"gun-turret", "laser-turret", "flamethrower-turret", "artillery-turret", "rocket-turret", "tesla-turret", "railgun-turret"}
+addRightwardChain{"firearm-magazine", "gun-turret"}
+RIGHT["piercing-rounds-magazine"] = "gun-turret"
+LEFT["piercing-rounds-magazine"] = "gun-turret"
+RIGHT["uranium-rounds-magazine"] = "gun-turret"
+LEFT["uranium-rounds-magazine"] = "gun-turret"
+addRightwardChain{"artillery-shell", "artillery-turret"}
+addRightwardChain{"rocket", "rocket-turret", "rocket-launcher"}
+RIGHT["explosive-rocket"] = "rocket-turret"
+LEFT["explosive-rocket"] = "rocket-turret"
+RIGHT["atomic-bomb"] = "rocket-turret"
+LEFT["atomic-bomb"] = "rocket-turret"
+addRightwardChain{"railgun-ammo", "railgun-turret", "railgun"}
+addRightwardChain{"flamethrower-ammo", "flamethrower-turret", "flamethrower"}
+addRightwardChain{"tesla-ammo", "teslagun"}
 
 ------------------------------------------------------------------------
 -- Checks for whether items exist.

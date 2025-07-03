@@ -27,4 +27,18 @@ data:extend({
 		alternative_key_sequence = "SHIFT + D",
 		order = "d",
 	},
+	{
+		type = "custom-input",
+		name = "VariantHotkeys-tab-left",
+		key_sequence = "CONTROL + SHIFT + mouse-wheel-down",
+		alternative_key_sequence = "CONTROL + SHIFT + A",
+		order = "e",
+	},
+	{
+		type = "custom-input",
+		name = "VariantHotkeys-tab-right",
+		key_sequence = "CONTROL + SHIFT + mouse-wheel-up",
+		alternative_key_sequence = "CONTROL + SHIFT + D",
+		order = "f",
+	},
 })

@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.4.0
+Date: 2025-07-03
+  Features:
+    - Added "Factoriopedia mode" setting to move around between items in the same arrangement as Factoriopedia. This is now the default, so you should adjust setting to "handmade" if you want the old behavior.
+    - Added "tab" control (with hotkey ctrl-shift-mousewheel or ctrl-shift-A/D) to move between tabs of the Factoriopedia, when in Factoriopedia mode.
+---------------------------------------------------------------------------------------------------
 Version: 1.3.0
 Date: 2025-01-16
   Features:

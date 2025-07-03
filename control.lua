@@ -57,6 +57,7 @@ local function getPlayerHeldItem(player)
 		return { name = player.cursor_ghost.name.name, quality = player.cursor_ghost.quality }
 	else
 		--No held item or ghost.
+		-- Would be nice to be able to move between signals in the cursor, but I can't see any way to do that with the API.
 	end
 end
 

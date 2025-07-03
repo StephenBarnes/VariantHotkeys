@@ -42,3 +42,7 @@ data:extend({
 		order = "f",
 	},
 })
+
+-- I want to move in max subgroup length as a mod-data prototype, but mod-data is in experimental. So instead for now I'm smuggling it in here.
+-- TODO change once mod-data is out of experimental.
+data.raw.item["green-wire"].weight = data.raw["utility-constants"].default.select_slot_row_count

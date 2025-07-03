@@ -12,13 +12,12 @@ local TAB_RIGHT = {} ---@type { string: string }
 --- Build tables.
 ------------------------------------------------------------------------
 
-local items = prototypes.item
 ---@alias ItemEntry { name: string, order: string, left: ItemEntry, right: ItemEntry, up: ItemEntry, down: ItemEntry, tabLeft: ItemEntry, tabRight: ItemEntry }
 ---@alias SubgroupEntry { name: string, order: string, items: ItemEntry[], up: SubgroupEntry, down: SubgroupEntry, tabLeft: SubgroupEntry, tabRight: SubgroupEntry }
 ---@alias GroupEntry { name: string, order: string, subgroups: SubgroupEntry[], tabRight: GroupEntry, tabLeft: GroupEntry }
 local groups = {} ---@type GroupEntry[]
 
--- Function to find an entry by name in a table.
+-- Find an entry by .name in a table.
 ---@param table GroupEntry[] | SubgroupEntry[] | ItemEntry[]
 ---@param name string
 ---@return GroupEntry | SubgroupEntry | ItemEntry | nil
@@ -29,7 +28,7 @@ local function findByName(table, name)
 	return nil
 end
 
--- Function to get entry in a table by index, wrapping around if necessary.
+-- Get entry in a table by index, wrapping around if necessary.
 ---@generic T
 ---@param table T[]
 ---@param index number
@@ -38,7 +37,7 @@ local function modIndex(table, index)
 	return table[(index - 1) % #table + 1]
 end
 
--- Function to get the index of an entry in a table, but if index is above max, then return the last entry.
+-- Get the index of an entry in a table, but if index is above max, then return the last entry.
 ---@generic T
 ---@param table T[]
 ---@param index number
@@ -47,7 +46,7 @@ local function ceilIndex(table, index)
 	return table[math.min(index, #table)]
 end
 
--- Function to get the order of an item, subgroup, or group.
+-- Get the order of an item, subgroup, or group.
 ---@param x LuaItemPrototype | LuaGroup
 ---@return string
 local function getOrder(x)
@@ -59,13 +58,13 @@ local function getOrder(x)
 	return ""
 end
 
--- TODO ignore hidden tabs and subgroups.
-
--- Function to add an item to the arrangement, creating groups and subgroups as needed.
+-- Add an item to the arrangement, creating groups and subgroups as needed.
 ---@param item LuaItemPrototype
 ---@return nil
 local function addItem(item)
 	if item.hidden or item.hidden_in_factoriopedia then return end
+	---@diagnostic disable-next-line: undefined-field
+	if item.factoriopedia_alternative ~= nil then return end
 
 	local order = getOrder(item)
 	local itemEntry = { name = item.name, order = order }
@@ -98,9 +97,15 @@ local function addItem(item)
 end
 
 -- Add all items to the arrangement.
-for _, item in pairs(items) do
+for _, item in pairs(prototypes.item) do
 	addItem(item)
 end
+-- Could add virtual signals as well. But there's no way to get the signal in player's cursor, or change it. TODO change this if they add the API.
+--[[
+for _, signal in pairs(prototypes.virtual_signal) do
+	addItem(signal)
+end
+]]
 
 -- Sort groups, subgroups, and items by order.
 table.sort(groups, function(a, b) return a.order < b.order end)
@@ -109,6 +114,33 @@ for _, groupEntry in pairs(groups) do
 	for _, subgroupEntry in pairs(groupEntry.subgroups) do
 		table.sort(subgroupEntry.items, function(a, b) return a.order < b.order end)
 	end
+end
+
+-- Handle wrapping in Factoriopedia - split subgroups depending on layout constants.
+-- local maxSubgroupLen = data.raw["utility-constants"].default.select_slot_row_count -- This works but it's data-stage, and it's not exposed to runtime Lua.
+-- So instead I'll move it in via mod-data prototype. But that's in experimental, so for now I'll smuggle it in somewhere.
+-- TODO update this to use mod-data prototype once it's out of experimental.
+local maxSubgroupLen = prototypes.item["green-wire"].weight
+for _, groupEntry in pairs(groups) do
+	local newSubgroups = {}
+	for _, subgroupEntry in pairs(groupEntry.subgroups) do
+		if #subgroupEntry.items <= maxSubgroupLen then
+			table.insert(newSubgroups, subgroupEntry)
+		else
+			local startNextGroupAt = 1
+			local numItems = #subgroupEntry.items
+			while numItems > 0 do
+				local newSubgroup = { name = subgroupEntry.name, order = subgroupEntry.order, items = {} }
+				table.insert(newSubgroups, newSubgroup)
+				for i = startNextGroupAt, startNextGroupAt + maxSubgroupLen - 1 do
+					table.insert(newSubgroup.items, subgroupEntry.items[i])
+				end
+				startNextGroupAt = startNextGroupAt + maxSubgroupLen
+				numItems = numItems - maxSubgroupLen
+			end
+		end
+	end
+	groupEntry.subgroups = newSubgroups
 end
 
 -- Add tab left/right links between groups.

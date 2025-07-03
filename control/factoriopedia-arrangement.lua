@@ -107,12 +107,20 @@ for _, signal in pairs(prototypes.virtual_signal) do
 end
 ]]
 
+-- Order items the same way as the base game - first by .order, then by .name.
+---@param a ItemEntry | SubgroupEntry | GroupEntry
+---@param b ItemEntry | SubgroupEntry | GroupEntry
+---@return boolean
+local function orderThings(a, b)
+	return a.order < b.order or (a.order == b.order and a.name < b.name)
+end
+
 -- Sort groups, subgroups, and items by order.
-table.sort(groups, function(a, b) return a.order < b.order end)
+table.sort(groups, orderThings)
 for _, groupEntry in pairs(groups) do
-	table.sort(groupEntry.subgroups, function(a, b) return a.order < b.order end)
+	table.sort(groupEntry.subgroups, orderThings)
 	for _, subgroupEntry in pairs(groupEntry.subgroups) do
-		table.sort(subgroupEntry.items, function(a, b) return a.order < b.order end)
+		table.sort(subgroupEntry.items, orderThings)
 	end
 end
 

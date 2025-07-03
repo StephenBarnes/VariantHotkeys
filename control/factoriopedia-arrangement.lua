@@ -54,7 +54,7 @@ local function getOrder(x)
 	for _, key in pairs{"place_result", "place_as_equipment_result", "place_as_tile_result"} do
 		if x[key] ~= nil and x[key].order ~= nil then return x[key].order end
 	end
-	log("Error: item/group " .. x.name .. " has no order") -- TODO check if this generates any errors with default Spage etc.
+	log("Error: item/group " .. x.name .. " has no order")
 	return ""
 end
 
@@ -71,12 +71,12 @@ local function addItem(item)
 
 	local subgroup = item.subgroup
 	if subgroup == nil then
-		log("Error: item " .. item.name .. " has no subgroup") -- TODO check
+		log("Error: item " .. item.name .. " has no subgroup")
 		return
 	end
 	local group = subgroup.group
 	if group == nil then
-		log("Error: item " .. item.name .. " in subgroup " .. subgroup.name .. " has no group") -- TODO check
+		log("Error: item " .. item.name .. " in subgroup " .. subgroup.name .. " has no group")
 		return
 	end
 	local groupEntry = findByName(groups, group.name) ---@as GroupEntry?
@@ -90,7 +90,7 @@ local function addItem(item)
 		table.insert(groupEntry.subgroups, subgroupEntry)
 	end
 	if findByName(subgroupEntry.items, item.name) ~= nil then
-		log("Error: item " .. item.name .. " already exists in subgroup " .. subgroup.name) -- TODO check
+		log("Error: item " .. item.name .. " already exists in subgroup " .. subgroup.name)
 		return
 	end
 	table.insert(subgroupEntry.items, itemEntry)

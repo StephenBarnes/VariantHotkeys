@@ -7,5 +7,5 @@
 	"dependencies": [
 		"base >= 2.0"
 	],
-	"description": "Adds shortcut keys to change held item to a variant or increase/decrease tier"
+	"description": "Adds shortcut keys to change held item to a variant, following Factoriopedia's layout"
 }

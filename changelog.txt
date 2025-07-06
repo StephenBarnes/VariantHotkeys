@@ -2,6 +2,7 @@
 Version: 1.5.0
 Date: 2025-07-06
   Features:
+    - Added setting to show a floating text message telling you what item you switched to. Disabled by default.
     - Added looping and non-looping modes for Factoriopedia arrangement.
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.0

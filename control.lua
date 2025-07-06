@@ -30,6 +30,18 @@ end
 
 ---@param player LuaPlayer
 ---@param item ItemIDAndQualityIDPair
+local function showSwitchMessage(player, item)
+	if player.mod_settings["VariantHotkeys-switch-message"].value then
+		local itemProt = prototypes.item[item.name]
+		if itemProt ~= nil and itemProt.localised_name ~= nil then
+			player.clear_local_flying_texts()
+			player.create_local_flying_text{text = itemProt.localised_name, create_at_cursor = true} -- Can't specify speed or time to live if create_at_cursor is true.
+		end
+	end
+end
+
+---@param player LuaPlayer
+---@param item ItemIDAndQualityIDPair
 local function switchToItemOrGhost(player, item)
 	player.clear_cursor() -- Do this before anything else, to put held items back into inventory.
 	-- Given player and item name, switch to item or ghost with that itemName, depending if player has that item.
@@ -39,12 +51,14 @@ local function switchToItemOrGhost(player, item)
 		local targetInInventory = inventory.find_item_stack(item)
 		if targetInInventory ~= nil then
 			player.cursor_stack.set_stack(targetInInventory)
+			showSwitchMessage(player, item)
 			targetInInventory.clear() -- Remove from inventory so we don't dupe items.
 			return
 		end
 	end
 	-- If we reach this point we couldn't put an item from inventory into player's cursor, so put a ghost instead.
 	player.cursor_ghost = item
+	showSwitchMessage(player, item)
 end
 
 ---@param player LuaPlayer

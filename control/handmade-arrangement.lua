@@ -5,10 +5,10 @@
 ------------------------------------------------------------------------
 
 -- These hold the item names we transition between when the hotkeys are pressed.
-local UP = {} ---@type { string: string }
-local DOWN = {} ---@type { string: string }
-local LEFT = {} ---@type { string: string }
-local RIGHT = {} ---@type { string: string }
+local UP = {} ---@type KeyTransitionTable
+local DOWN = {} ---@type KeyTransitionTable
+local LEFT = {} ---@type KeyTransitionTable
+local RIGHT = {} ---@type KeyTransitionTable
 
 local function addUpperLower(a, b, override)
 	if (not override) and (DOWN[a] ~= nil or UP[b] ~= nil) then
@@ -335,6 +335,7 @@ end
 ]]
 
 -- Return the transition table.
+---@type TransitionTable
 return {
 	UP = UP,
 	DOWN = DOWN,

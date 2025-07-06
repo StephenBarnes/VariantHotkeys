@@ -1,5 +1,7 @@
-local HandmadeMode = require("control/handmade-arrangement")
-local FactoriopediaMode = require("control/factoriopedia-arrangement")
+local HandmadeMode = require("control/handmade-arrangement") ---@as TransitionTable
+local FactoriopediaModes = require("control/factoriopedia-arrangements")
+local FactoriopediaLoopingMode = FactoriopediaModes.LOOPING ---@as TransitionTable
+local FactoriopediaNonLoopingMode = FactoriopediaModes.NON_LOOPING ---@as TransitionTable
 
 ------------------------------------------------------------------------
 -- Functions to change held item/ghost.
@@ -104,7 +106,7 @@ end
 ------------------------------------------------------------------------
 
 ---@param event EventData.CustomInputEvent
----@param transitionKey "UP" | "DOWN" | "LEFT" | "RIGHT" | "TAB_LEFT" | "TAB_RIGHT"
+---@param transitionKey Key
 local function handleEvent(event, transitionKey)
 	---@cast event EventData.CustomInputEvent
 	if event.player_index == nil then return end
@@ -112,8 +114,10 @@ local function handleEvent(event, transitionKey)
 	if player == nil or not player.valid then return end
 
 	local playerMode = player.mod_settings["VariantHotkeys-mode"].value
-	if playerMode == "factoriopedia" then
-		transitionDict = FactoriopediaMode
+	if playerMode == "factoriopedia-non-looping" then
+		transitionDict = FactoriopediaNonLoopingMode
+	elseif playerMode == "factoriopedia-looping" then
+		transitionDict = FactoriopediaLoopingMode
 	elseif playerMode == "handmade" then
 		transitionDict = HandmadeMode
 	else
